@@ -1,0 +1,176 @@
+---
+title: "Regression"
+output: html_document
+date: "2023-04-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)  
+#for data manipulation operations
+library(ggplot2)
+ds <- read.csv("Funding.csv")
+```
+
+```{r}
+#Dimension of the data
+dim(ds)
+#Structure of the data
+str(ds)
+#Columns in the dataset
+names(ds)
+#Unique values in Startup column of the dataset
+unique(ds$Startup)
+#sample data from first 3 rows
+head(ds,3)
+#sample data from last 3 rows
+tail(ds,3)
+```
+
+```{r}
+#Summary of the data
+summary(ds)
+#Checking for missing values in the data
+any(is.na(ds))
+#Checking for the total no. of missing values in the data
+sum(is.na(ds))
+#Cleaning NA values in the dataset
+newset <- na.omit(ds)
+#Checking the total no. of missing values in the dataset after performing cleaning operation.
+sum(is.na(newset))
+```
+
+```{r}
+#Structure of the data now
+str(newset)
+```
+
+```{r}
+#Summary of the data
+summary(ds)
+#Checking for missing values in the data
+any(is.na(ds))
+#Checking for the total no. of missing values in the data
+sum(is.na(ds))
+#Cleaning NA values in the dataset
+newset <- na.omit(ds)
+#Checking the total no. of missing values in the dataset after performing cleaning operation.
+sum(is.na(newset))
+```
+
+```{r}
+#Structure of the data now
+str(newset)
+```
+
+```{r}
+#Boolean Indexing
+newds <- ds[complete.cases(ds),]
+sum(is.na(newset))
+#Imputation - filling the missing values
+#Checking for the total no. of missing values in a particular column - Year
+sum(is.na(ds$Year))
+#Checking for the total no. of missing values in a particular column - Startup
+sum(is.na(ds$Startup))
+#Checking for the total no. of missing values in a particular column - Industry Vertical
+sum(is.na(ds$Industry.Vertical))
+#Checking for the total no. of missing values in a particular column - Location
+sum(is.na(ds$Location))
+#Checking for the total no. of missing values in a particular column - Investors
+sum(is.na(ds$Investors))
+#Checking for the total no. of missing values in a particular column - Investment Type
+sum(is.na(ds$InvestmentType))
+#Checking for the total no. of missing values in a particular column - Amount
+sum(is.na(ds$Amount))
+```
+
+```{r}
+df <- newset
+dim(df)
+```
+
+```{r}
+# Load the required packages for the model
+library(xgboost)
+library(caret)
+library(tidyverse) 
+```
+
+```{r}
+# Convert variable to factor
+df$Industry.Vertical <- factor(df$Industry.Vertical)
+
+# Encode the factor as integers
+df$IndustryVerticalEncoded <- as.integer(df$Industry.Vertical)
+
+# View the unique values of the encoded variable
+unique(df$IndustryVerticalEncoded)
+
+# Same steps followed for Location and InvestmentType
+df$Location <- factor(df$Location)
+df$LocationEncoded <- as.integer(df$Location)
+unique(df$LocationEncoded)
+
+df$InvestmentType <- factor(df$InvestmentType)
+df$InvestmentTypeEncoded <- as.integer(df$InvestmentType)
+unique(df$InvestmentTypeEncoded)
+```
+
+```{r}
+# Split the data into training and test sets
+trainIndex <- createDataPartition(df$Amount, p = 0.9, list = FALSE)
+train <- df[trainIndex, ]
+test <- df[-trainIndex, ]
+```
+
+```{r}
+# Checking the dimensions of train and test sets
+dim(train)
+dim(test)
+```
+
+
+```{r}
+# Remove the dollar sign from the Amount variable
+train$Amount <- gsub("\\$", "", train$Amount)
+
+# Convert the Amount variable to numeric
+train$Amount <- as.numeric(train$Amount)
+```
+
+```{r}
+train <- na.omit(train)
+```
+
+```{r}
+# Define the input variables and the target variable
+predictors <- c("IndustryVerticalEncoded", "LocationEncoded", "InvestmentTypeEncoded")# List of input variables
+target <- "Amount" # Name of the target variable
+```
+
+```{r}
+# Train an XGBoost model
+xgb_model <- xgboost(data = as.matrix(train[, predictors]),
+                     label = train[, target],
+                     nrounds = 10000,
+                     objective = "reg:linear",
+                     max_depth = 10,
+                     eta = 0.3,
+                     gamma = 0,
+                     colsample_bytree = 0.8,
+                     min_child_weight = 1,
+                     subsample = 0.8)
+```
+
+```{r}
+# Predictions on the test set
+predictions <- predict(xgb_model, as.matrix(test[, predictors]))
+predictions <- abs(predictions)
+```
+
+```{r}
+print(predictions)
+```

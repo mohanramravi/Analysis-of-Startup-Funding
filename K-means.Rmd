@@ -1,0 +1,145 @@
+---
+title: "Start-ups Funding Analysis using K-means"
+output: html_notebook
+---
+```{r}
+library(dplyr)  
+#for data manipulation operations
+library(ggplot2)
+ds <- read.csv("Funding.csv")
+```
+
+```{r}
+#Dimension of the data
+dim(ds)
+#Structure of the data
+str(ds)
+#Columns in the dataset
+names(ds)
+#Unique values in Startup column of the dataset
+unique(ds$Startup)
+#sample data from first 3 rows
+head(ds,3)
+#sample data from last 3 rows
+tail(ds,3)
+```
+
+```{r}
+#Summary of the data
+summary(ds)
+#Checking for missing values in the data
+any(is.na(ds))
+#Checking for the total no. of missing values in the data
+sum(is.na(ds))
+#Cleaning NA values in the dataset
+newset <- na.omit(ds)
+#Checking the total no. of missing values in the dataset after performing cleaning operation.
+sum(is.na(newset))
+```
+
+```{r}
+#Structure of the data now
+str(newset)
+```
+
+```{r}
+#Boolean Indexing
+newds <- ds[complete.cases(ds),]
+sum(is.na(newset))
+#Imputation - filling the missing values
+#Checking for the total no. of missing values in a particular column - Year
+sum(is.na(ds$Year))
+#Checking for the total no. of missing values in a particular column - Startup
+sum(is.na(ds$Startup))
+#Checking for the total no. of missing values in a particular column - Industry Vertical
+sum(is.na(ds$Industry.Vertical))
+#Checking for the total no. of missing values in a particular column - Location
+sum(is.na(ds$Location))
+#Checking for the total no. of missing values in a particular column - Investors
+sum(is.na(ds$Investors))
+#Checking for the total no. of missing values in a particular column - Investment Type
+sum(is.na(ds$InvestmentType))
+#Checking for the total no. of missing values in a particular column - Amount
+sum(is.na(ds$Amount))
+```
+
+```{r}
+df <- newset
+dim(df)
+```
+
+```{r}
+# Convert variable to factor
+df$Industry.Vertical <- factor(df$Industry.Vertical)
+
+# Encode the factor as integers
+df$IndustryVerticalEncoded <- as.integer(df$Industry.Vertical)
+
+# View the unique values of the encoded variable
+unique(df$IndustryVerticalEncoded)
+
+# Same steps followed for Location and InvestmentType
+df$Location <- factor(df$Location)
+df$LocationEncoded <- as.integer(df$Location)
+unique(df$LocationEncoded)
+
+df$InvestmentType <- factor(df$InvestmentType)
+df$InvestmentTypeEncoded <- as.integer(df$InvestmentType)
+unique(df$InvestmentTypeEncoded)
+
+```
+
+
+```{r}
+# Variables to be used in clustering
+variables <- df[, c("IndustryVerticalEncoded", "LocationEncoded", "InvestmentTypeEncoded")]
+
+# Scale the variables
+scaled_variables <- scale(variables)
+
+# Determine the optimal number of clusters using the elbow method
+wss <- (nrow(scaled_variables)-1)*sum(apply(scaled_variables,2,var))
+for (i in 2:10) wss[i] <- sum(kmeans(scaled_variables, centers=i)$withinss)
+plot(1:10, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+
+# Choose the number of clusters
+k <- 4
+
+# Perform k-means clustering
+set.seed(123)
+cluster <- kmeans(scaled_variables, centers=k)
+
+# View the cluster centers
+cluster$centers
+
+# View the size of each cluster
+table(cluster$cluster)
+
+# Add the cluster labels to the original data frame
+df$Cluster <- cluster$cluster
+
+```
+
+```{r}
+#Results
+selected_cols <- select(df, Startup, Year, Industry.Vertical, Location, InvestmentType, Amount, Cluster)
+
+# Print a random sample of 10 rows
+sample_n(selected_cols, 10)
+```
+
+```{r}
+library(ggplot2)
+
+# Combine the original data and cluster assignments
+df_clustered <- cbind(df, cluster$cluster)
+
+# Plot the data with color-coded clusters
+ggplot(df_clustered, aes(x=IndustryVerticalEncoded, y=LocationEncoded, color=factor(cluster$cluster))) +
+  geom_point() +
+  xlab("Industry Vertical") +
+  ylab("Location") +
+  ggtitle("K-Means Clustering Results")
+```
+
+
